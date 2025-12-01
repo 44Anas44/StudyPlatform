@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin • MathMastermind</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-6 max-w-5xl">
+        <h1 class="text-4xl font-bold mb-8 text-gray-800 flex items-center gap-3">
+            <i data-feather="shield" class="w-10 h-10 text-primary-600"></i>
+            Dashboard Admin MathMastermind
+        </h1>
+
+        <!-- Password protection -->
+        <script>
+            if (prompt("Mot de passe admin ?") !== "math2025") {
+                alert("Accès refusé");
+                window.location.href = "index.html";
+            }
+            feather.replace();
+        </script>
+
+        <!-- Add / Edit Quiz -->
+        <div class="bg-white p-8 rounded-2xl shadow-lg mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Ajouter / Modifier un Quiz (JSON)</h2>
+            <textarea id="jsonInput" class="w-full h-96 font-mono text-sm p-4 border-2 border-gray-300 rounded-lg focus:border-primary-500 focus:outline-none" placeholder='Collez ici le JSON complet d’un quiz...'></textarea>
+            <button onclick="saveQuiz()" class="mt-4 px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
+                Sauvegarder le quiz (simulation)
+            </button>
+            <p class="text-sm text-gray-600 mt-3">En production réelle, cela enverrait les données à un serveur.</p>
+        </div>
+
+        <!-- Results Table -->
+        <div class="bg-white p-8 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+                <i data-feather="bar-chart-2" class="w-7 h-7"></i>
+                Résultats des élèves
+            </h2>
+            <div id="resultsTable" class="space-y-3 text-gray-700"></div>
+            <p id="noResults" class="text-center text-gray-500 py-8 hidden">
+                Aucun résultat pour le moment.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function saveQuiz() {
+            try {
+                const json = JSON.parse(document.getElementById('jsonInput').value);
+                alert("Quiz valide et sauvegardé en simulation !");
+                console.log("Quiz sauvegardé :", json);
+            } catch (e) {
+                alert("JSON invalide ! Vérifiez la syntaxe.");
+            }
+        }
+
+        // Load and merge results from localStorage + results.json file
+        async function loadResults() {
+            let results = JSON.parse(localStorage.getItem('results.json') || '[]');
+
+            // Try to also load from the static file (in case of first visit)
+            try {
+                const resp = await fetch('data/results.json?' + Date.now()); // cache buster
+                const fileResults = await resp.json();
+                // Merge without duplicates (key = date + ip + quizTitle)
+                const seen = new Set();
+                const merged = [...results, ...fileResults].filter(r => {
+                    const key = `${r.date}-${r.ip}-${r.quizTitle}`;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                results = merged;
+                localStorage.setItem('results.json', JSON.stringify(results));
+            } catch (e) {
+                console.log("Impossible de charger results.json (normal en local)");
+            }
+
+            const container = document.getElementById('resultsTable');
+            const noResults = document.getElementById('noResults');
+
+            if (results.length === 0) {
+                noResults.classList.remove('hidden');
+                container.innerHTML = '';
+                return;
+            }
+
+            noResults.classList.add('hidden');
+            container.innerHTML = results
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(r => `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                        <div>
+                            <span class="font-semibold text-primary-700">${r.date}</span>
+                            <span class="mx-2 text-gray-500">•</span>
+                            <span class="text-sm">IP : ${r.ip || 'inconnue'}</span>
+                        </div>
+                        <div class="mt-2 sm:mt-0 text-right">
+                            <span class="font-medium">${r.quizTitle || 'Quiz inconnu'}</span>
+                            <span class="mx-2 text-gray-500">→</span>
+                            <span class="font-bold text-lg ${r.percentage >= 70 ? 'text-green-600' : r.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'}">
+                                ${r.score} (${r.percentage}%)
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        loadResults();
+    </script>
+</body>
+</html>

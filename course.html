@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathMastermind | Cours</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <custom-navbar></custom-navbar>
+    
+    <main class="container mx-auto px-4 py-12">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-primary-700 mb-4" id="courseTitle">Titre du cours</h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto" id="courseDescription">Description du cours</p>
+        </header>
+
+        <div class="max-w-3xl mx-auto">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Quizzes disponibles</h2>
+                
+                <div class="space-y-4" id="quizzesContainer">
+                    <!-- Quizzes chargés dynamiquement -->
+                </div>
+            </div>
+            
+            <a href="index.html" class="inline-flex items-center text-primary-600 hover:text-primary-700">
+                <i data-feather="arrow-left"></i>
+                <span class="ml-2">Retour aux cours</span>
+            </a>
+        </div>
+    </main>
+
+    <custom-footer></custom-footer>
+
+    <script src="components/navbar.js"></script>
+    <script src="components/footer.js"></script>
+    <script src="script.js"></script>
+    <script>
+        feather.replace();
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('id');
+        
+        fetch('data/courses.json')
+            .then(r => r.json())
+            .then(courses => {
+                const course = courses.find(c => c.id == courseId);
+                if (course) {
+                    document.getElementById('courseTitle').textContent = course.title;
+                    document.getElementById('courseDescription').textContent = course.description;
+                }
+
+                fetch('data/quizzes.json')
+                    .then(r => r.json())
+                    .then(quizzesData => {
+                        const courseQuizzes = quizzesData[courseId] || [];
+                        const container = document.getElementById('quizzesContainer');
+                        container.innerHTML = '';
+
+                        courseQuizzes.forEach((quiz, index) => {
+                            const minutes = Math.floor(quiz.time / 60);
+                            const div = document.createElement('div');
+                            div.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors';
+                            div.innerHTML = `
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">${quiz.title}</h3>
+                                <p class="text-gray-600 mb-3">${quiz.questions.length} questions • ${minutes} minutes</p>
+                                <a href="quiz.html?course=${courseId}&quiz=${index}" class="inline-block px-4 py-2 bg-primary-500 text-violet rounded-lg hover:bg-primary-600 transition-colors">Commencer le quiz</a>
+                            `;
+                            container.appendChild(div);
+                        });
+                    });
+            });
+    </script>
+</body>
+</html>
